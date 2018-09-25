@@ -18,7 +18,7 @@ type SensorMessage struct {
 
 func (mm *MessageManager) Start() {
 	go func (mq <-chan string) {
-		
+
 	} (mm.sg.mc)
 }
 
