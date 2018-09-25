@@ -13,7 +13,7 @@ type Sensor struct {
 }
 
 type SensorGroup struct {
-	mc       chan string
+	Mq      chan string
 	Sensors  []*Sensor
 }
 
@@ -24,13 +24,13 @@ func NewSensorGroup(port ...int) (*SensorGroup) {
 		sensors = append(sensors, sensor)
 	}
 	return &SensorGroup{
-		mc: make(chan string, 512),
+		Mq: make(chan string, 512),
 		Sensors: sensors}
 }
 
 func (sg *SensorGroup) StartAll() {
 	for _,v := range sg.Sensors {
-		go v.start(sg.mc)
+		go v.start(sg.Mq)
 	}
 }
 

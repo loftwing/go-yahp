@@ -2,25 +2,20 @@ package main
 
 import (
 	`bufio`
-	"context"
-	"fmt"
+	`context`
+	`fmt`
+	`gopkg.in/natefinch/npipe.v2`
 	`io`
-	"log"
-	"net"
-	"os/exec"
-	"sync"
+	`log`
+	`net`
+	`os/exec`
+	`sync`
 	`time`
+)
 
-	"gopkg.in/natefinch/npipe.v2"
 )
 
 var wg sync.WaitGroup
-
-type SensorMessage struct {
-	Returntype string `json:"returntype"`
-	Port       int64  `json:"port"`
-	Ip         string `json:"ip"`
-}
 
 func failOnError(err error, msg string) {
 	if err != nil {
