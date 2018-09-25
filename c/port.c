@@ -9,6 +9,7 @@
 void con_msg( USHORT port, PCWSTR ip);
 void err(PWSTR code);
 
+DWORD callport;
 
 int CALLBACK ConditionAcceptFunc(
     LPWSABUF lpCallerId,
@@ -40,7 +41,7 @@ int CALLBACK ConditionAcceptFunc(
         //wprintf_s( L"debug ip: %s\n", szip );
         //wprintf_s( L"debug port: %d\n", usport );
 
-        con_msg( usport, szip );
+        con_msg( callport, szip );
     }
 
     exit( 0 );
@@ -88,6 +89,8 @@ int wmain( int argc, wchar_t *argv[ ], wchar_t *envp[ ] ) {
     char* ip;
     SOCKADDR_IN service;
     int error;
+
+    callport = port;
 
     error = WSAStartup(MAKEWORD(2,2), &wsaData);
     if (error) {
@@ -139,8 +142,8 @@ int wmain( int argc, wchar_t *argv[ ], wchar_t *envp[ ] ) {
 
     //wprintf_s(L"listening");
 
-    PCWSTR s = L"{\"returntype\": \"start\", \"port\": %d, \"ip\": \"xxx\"}\n";
-    wprintf_s( s, port );
+    //PCWSTR s = L"{\"returntype\": \"start\", \"port\": %d, \"ip\": \"xxx\"}\n";
+    //wprintf_s( s, port );
 
 
 	while (1) {
