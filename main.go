@@ -4,11 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"os/exec"
 	"sync"
-
-	"gopkg.in/natefinch/npipe.v2"
 )
 
 // var elog debug.Log
@@ -97,39 +94,25 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func startListener(ctx context.Context, port string) {
+func startListener(ctx context.Context, port string) (string, error) {
 	cmd := exec.CommandContext(ctx, "port.exe", port)
-	err2 := cmd.Start()
-	if err2 != nil {
-		log.Println("Failed exec cmd")
-	}
-}
-
-func pipeHandler(c net.Conn) {
-	//r := bufio.NewReader(c)
-
-}
-
-func startPipeServer() {
-	ln, err := npipe.Listen(`\\.\pipe\yahp`)
+	out, err := cmd.Output()
 	if err != nil {
-		log.Panic(err)
+		log.Println("Failed exec cmd")
+		return "", err
 	}
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Println("[ERR] PIPE: ", err)
-			continue
-		}
-
-		go pipeHandler(conn)
-	}
+	return string(out), nil
 }
 
 func respawn(port string) {
 	for {
-		startListener(context.Background(), port)
+		out, err := startListener(context.Background(), port)
+		if err != nil {
+			log.Println(err)
+		}
+
+		log.Println(out)
 	}
 	wg.Done()
 }
