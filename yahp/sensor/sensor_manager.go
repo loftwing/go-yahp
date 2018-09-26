@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"time"
 )
 
 type Sensor struct {
@@ -56,7 +57,7 @@ func (s *Sensor) start(mc chan<- string) {
 		s.Started = false
 		mc <- out
 
-		// wait 5 mins before re-opening the port, disabled while developing
-		//time.Sleep(time.Minute * 5)
+		// wait 1 min before re-opening the port, disabled while developing
+		time.Sleep(time.Minute)
 	}
 }

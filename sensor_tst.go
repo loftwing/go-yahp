@@ -3,29 +3,24 @@ package main
 import (
 	"github.com/loftwing/go-yahp/yahp/sensor"
 	"log"
-	"sync"
-	"time"
 )
 
-var wg sync.WaitGroup
-
 func main() {
+	forever := make(chan bool)
+
 	ports := []int{4444, 5555, 6666, 7777}
 	sg := sensor.NewSensorGroup(ports...)
 	sg.StartAll()
 
-	go func(sg *sensor.SensorGroup) {
-		mq := sg.Mq
-		for {
-			select {
-			case msg := <-mq:
-				log.Printf("message recvd: %+v\n", msg)
-			default:
-				time.Sleep(time.Second * 2)
-			}
-		}
-	}(sg)
+	mm, err := sensor.NewMessageManager(
+		"amqp://guest:guest@localhost:5672/",
+		"yahp",
+		sg.Mq,
+	)
+	if err != nil {
+		log.Panic(err)
+	}
+	mm.Start()
 
-	wg.Add(1)
-	wg.Wait()
+	<-forever
 }
