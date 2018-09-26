@@ -8,31 +8,35 @@ import (
 	"time"
 )
 
-type Sensor struct {
+type Port struct {
 	Port    int
 	Started bool
 }
 
-type SensorGroup struct {
+type PortManager struct {
 	Mq      chan string
-	Sensors []*Sensor
+	LogChan chan<- string
+	Ports   []*Port
 }
 
-func NewSensorGroup(port ...int) *SensorGroup {
-	var sensors []*Sensor
+func NewPortManager(lc chan<- string, port ...int) *PortManager {
+	var ports []*Port
 	for _, v := range port {
-		sensor := &Sensor{Port: v, Started: false}
-		sensors = append(sensors, sensor)
+		sensor := &Port{Port: v, Started: false}
+		ports = append(ports, sensor)
 	}
-	return &SensorGroup{
+	return &PortManager{
 		Mq:      make(chan string, 512),
-		Sensors: sensors}
+		Ports:   ports,
+		LogChan: lc,
+	}
 }
 
-func (sg *SensorGroup) StartAll() {
-	for _, v := range sg.Sensors {
-		go v.start(sg.Mq)
+func (pm *PortManager) StartAll() {
+	for _, v := range pm.Ports {
+		go v.start(pm.Mq)
 	}
+	pm.StartMonitor()
 }
 
 func startListener(ctx context.Context, port string) (string, error) {
@@ -44,17 +48,28 @@ func startListener(ctx context.Context, port string) (string, error) {
 	return string(out), nil
 }
 
-func (s *Sensor) start(mc chan<- string) {
+func (pm *PortManager) StartMonitor() {
+	go func(lc chan<- string) {
+		for {
+			for _, v := range pm.Ports {
+				lc <- fmt.Sprintf("%d:%t", v.Port, v.Started)
+			}
+			time.Sleep(time.Second * 150)
+		}
+	}(pm.LogChan)
+}
+
+func (s *Port) start(mc chan<- string) {
 	for {
 		s.Started = true
 		port := fmt.Sprintf("%d", s.Port)
 		out, err := startListener(context.Background(), port)
 		if err != nil {
 			log.Println("sensor exec err: ", err)
+			s.Started = false
 		}
 
-		// set started to false, send output through to channel of sgroup
-		s.Started = false
+		// send output through to channel of sgroup
 		mc <- out
 
 		// wait 1 min before re-opening the port, disabled while developing

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/streadway/amqp"
 	"log"
+	"net"
 	"strings"
 )
 
@@ -14,21 +15,30 @@ type MessageManager struct {
 	RmqConnString string
 	RmqExchange   string
 	SensorMq      <-chan string
+	LogChan       <-chan string
+	HostIP        string
 }
 
-type SensorMessage struct {
+type PortMessage struct {
 	Returntype string `json:"returntype"`
 	Port       int64  `json:"port"`
 	Ip         string `json:"ip"`
 }
 
-func NewMessageManager(connstring, exchange string, mq <-chan string) (*MessageManager, error) {
+type Message struct {
+	HostIP string
+	Pm     *PortMessage
+}
+
+func NewMessageManager(connstring, exchange string, mq, lc <-chan string) (*MessageManager, error) {
 	mm := &MessageManager{
 		RmqConnection: nil,
 		RmqChannel:    nil,
 		RmqConnString: connstring,
 		RmqExchange:   exchange,
 		SensorMq:      mq,
+		LogChan:       lc,
+		HostIP:        localAddress(),
 	}
 
 	err := mm.Connect()
@@ -80,23 +90,45 @@ func (mm *MessageManager) Start() {
 	go func(mq <-chan string) {
 		for {
 			msg := <-mq
-			if sm, err := ParseSensorMessage(msg); err == nil {
-				if valid := validateMessage(sm); valid == true {
-					err := mm.Publish(sm, "yahp.connection")
+			if m, err := mm.ParseSensorMessage(msg); err == nil {
+				if valid := validateMessage(m.Pm); valid == true {
+					err := mm.Publish(m, "yahp.connection")
 					if err != nil {
 						log.Println("[MM] Failed to publish message to rmq: ", err)
 					}
 				} else {
-					log.Printf("[MM] Sensor message failed to validate: %+v\n", sm)
+					log.Printf("[MM] Port message failed to validate: %+v\n", m)
 				}
 			} else {
 				log.Println("[MM] Failed to parse message from sensor: ", msg, " error: ", err)
 			}
 		}
 	}(mm.SensorMq)
+
+	go func(lc <-chan string) {
+		for {
+			log := <-lc
+			mm.PublishLog(log)
+		}
+	}(mm.LogChan)
 }
 
-func (mm *MessageManager) Publish(msg *SensorMessage, topic string) error {
+func (mm *MessageManager) PublishLog(msg string) {
+	// TODO log msg stored in ip field for now...
+	ts := "yahp.log.listen"
+	sm := &PortMessage{
+		Returntype: "log",
+		Port:       1,
+		Ip:         msg,
+	}
+
+	m := &Message{HostIP: mm.HostIP, Pm: sm}
+	if err := mm.Publish(m, ts); err != nil {
+		log.Println("[LOG] Failed to publish log to rmq!")
+	}
+}
+
+func (mm *MessageManager) Publish(msg *Message, topic string) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -119,23 +151,46 @@ func (mm *MessageManager) Publish(msg *SensorMessage, topic string) error {
 	}
 }
 
-func validateMessage(msg *SensorMessage) bool {
+func validateMessage(msg *PortMessage) bool {
 	return (len(msg.Ip) <= 16) &&
 		(msg.Port > 1 && msg.Port < 65535) &&
 		(msg.Returntype == "con" || msg.Returntype == "err")
 }
 
-func ParseSensorMessage(msg string) (*SensorMessage, error) {
+func (mm *MessageManager) ParseSensorMessage(msg string) (*Message, error) {
 	dec := json.NewDecoder(strings.NewReader(msg))
-	sm := &SensorMessage{}
+	sm := &PortMessage{}
 	err := dec.Decode(sm)
 	if err != nil {
 		return nil, err
 	}
 
 	if !validateMessage(sm) {
-		return sm, errors.New("message validation failed")
+		return nil, errors.New("message validation failed")
 	}
 
-	return sm, nil
+	return &Message{HostIP: mm.HostIP, Pm: sm}, nil
+}
+
+func localAddress() string {
+	ip := "x.x.x.x"
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		log.Println("[ERR] Cant get interface address")
+		return ip
+	}
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		for _, a := range addrs {
+			addr := a.String()
+			if !strings.Contains(addr, ":") && !strings.Contains(addr, "127.0.0.1") {
+				return addr
+			}
+		}
+	}
+	return ip
 }
