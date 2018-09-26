@@ -2,3 +2,4 @@
 *.obj
 minisoc-test/
 .idea/
+vendor/

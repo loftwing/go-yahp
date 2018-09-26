@@ -1,13 +1,12 @@
 package yahp
 
 import (
-	`encoding/json`
-	`strings`
+	"encoding/json"
+	"strings"
 )
 
 type MessageManager struct {
-	sg       *SensorGroup
-
+	sg *SensorGroup
 }
 
 type SensorMessage struct {
@@ -17,9 +16,9 @@ type SensorMessage struct {
 }
 
 func (mm *MessageManager) Start() {
-	go func (mq <-chan string) {
+	go func(mq <-chan string) {
 
-	} (mm.sg.mc)
+	}(mm.sg.Mq)
 }
 
 func validateMessage(msg *SensorMessage) bool {
