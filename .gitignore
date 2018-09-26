@@ -3,3 +3,4 @@
 minisoc-test/
 .idea/
 vendor/
+config.toml

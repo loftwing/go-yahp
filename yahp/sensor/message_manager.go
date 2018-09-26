@@ -1,4 +1,4 @@
-package yahp
+package sensor
 
 import (
 	"encoding/json"

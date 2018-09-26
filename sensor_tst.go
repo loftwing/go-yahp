@@ -1,21 +1,20 @@
 package main
 
 import (
+	"github.com/loftwing/go-yahp/yahp/sensor"
 	"log"
 	"sync"
 	"time"
-
-	"github.com/loftwing/go-yahp/yahp"
 )
 
 var wg sync.WaitGroup
 
 func main() {
 	ports := []int{4444, 5555, 6666, 7777}
-	sg := yahp.NewSensorGroup(ports...)
+	sg := sensor.NewSensorGroup(ports...)
 	sg.StartAll()
 
-	go func(sg *yahp.SensorGroup) {
+	go func(sg *sensor.SensorGroup) {
 		mq := sg.Mq
 		for {
 			select {

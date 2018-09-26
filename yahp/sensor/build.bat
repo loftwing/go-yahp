@@ -10,7 +10,7 @@ popd
 :: clean
 del .\port.exe
 :: compile: stack cookies, CF guard, sdl warnings/errors, only compile
-cl /GS /guard:cf /sdl /c .\port.c
+cl /GS /guard:cf /sdl /c .\src\port.c
 
 :: link: ASLR, CF guard
 link /DYNAMICBASE /GUARD:cf /OUT:port.exe port.obj
@@ -19,4 +19,5 @@ link /DYNAMICBASE /GUARD:cf /OUT:port.exe port.obj
 del port.obj
 
 :: done
+pause
 exit
